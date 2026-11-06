@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>許願水族館 Wish Aquarium 🐙🦈</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Gaegu / Noto Sans TC) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Tesseract.js for OCR Image Text Recognition -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        aqua: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                        },
+                        pinky: {
+                            100: '#ffe4e6',
+                            200: '#fecdd3',
+                            300: '#fda4af',
+                            400: '#fb7185',
+                        }
+                    },
+                    fontFamily: {
+                        cute: ['Gaegu', 'Noto Sans TC', 'sans-serif'],
+                        sans: ['Noto Sans TC', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(180deg, #e0f2fe 0%, #fbcfe8 100%);
+            min-height: 100vh;
+        }
+        .cute-font {
+            font-family: 'Gaegu', cursive, 'Noto Sans TC', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #7dd3fc;
+            border-radius: 10px;
+        }
+        /* Card Flip & Animation */
+        .card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        /* Bubble floating animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(3deg); }
+        }
+        .floating {
+            animation: float 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="text-gray-700 pb-20">
+
+    <!-- App Container -->
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-white/70 backdrop-blur-md shadow-2xl border-x border-white/40 flex flex-col relative">
+
+        <!-- Top Header & Navigation -->
+        <header class="p-4 bg-white/80 sticky top-0 z-30 shadow-sm backdrop-blur-lg flex justify-between items-center rounded-b-2xl border-b border-pink-100">
+            <div class="flex items-center gap-2">
+                <span class="text-3xl floating">🐙</span>
+                <span class="text-3xl floating" style="animation-delay: 1.5s;">🦈</span>
+                <div>
+                    <h1 class="cute-font text-2xl font-bold text-sky-600 leading-tight">許願水族館</h1>
+                    <p id="roomDisplay" class="text-xs text-pink-400 font-medium">房間: shark-octopus-home</p>
+                </div>
+            </div>
+            <button id="loginBtn" onclick="openLoginModal()" class="px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-600 rounded-full text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-user"></i> <span id="userStatusText">Gmail 登入 / 房間</span>
+            </button>
+        </header>
+
+        <!-- Main Content Area (Dynamic Tabs) -->
+        <main class="flex-1 p-4 overflow-y-auto">
+
+            <!-- TAB 1: 抽卡 / 抽選箱 (Draw Tab) -->
+            <section id="tab-draw" class="tab-content space-y-6">
+                <!-- Selector & Stats -->
+                <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-sky-100 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-bold text-sky-700 flex items-center gap-1">
+                            <i class="fa-solid fa-filter"></i> 選擇抽卡類別：
+                        </label>
+                        <span id="cardPoolCount" class="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full font-bold">可抽：0 張</span>
+                    </div>
+                    <select id="drawCategorySelect" onchange="updateDrawPoolCount()" class="w-full p-2.5 bg-sky-50/50 border border-sky-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300">
+                        <option value="ALL">✨ 所有類別隨機</option>
+                    </select>
+                </div>
+
+                <!-- Draw Box Visual -->
+                <div class="flex flex-col items-center justify-center py-6 relative">
+                    <!-- Fishbowl / Box Animation Container -->
+                    <div id="drawContainer" class="w-64 h-64 bg-gradient-to-b from-sky-100/80 to-blue-200/80 rounded-full border-4 border-white shadow-inner flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer transition transform hover:scale-105" onclick="drawCard()">
+                        <!-- Water Waves & Bubbles -->
+                        <div class="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-sky-300 to-blue-400"></div>
+                        <div class="z-10 text-center p-4">
+                            <div class="text-6xl mb-2 floating">🔮</div>
+                            <p class="cute-font text-2xl font-bold text-sky-700">點擊海洋抽一張卡！</p>
+                            <p class="text-xs text-sky-500 mt-1">🐙 八爪魚 & 🦈 鯊魚的許願池</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drawn Card Display Modal/Card -->
+                <div id="drawnCardResult" class="hidden space-y-4">
+                    <div class="text-center">
+                        <span class="cute-font text-xl text-pink-500 font-bold">🎉 抽到了這個任務/願望！</span>
+                    </div>
+                    <!-- Displayed Card -->
+                    <div id="cardResultDetail" class="bg-white rounded-2xl p-5 shadow-xl border-2 border-pink-200 relative overflow-hidden space-y-3">
+                        <!-- Dynamic content filled by JS -->
+                    </div>
+
+                    <!-- Action Buttons for Drawn Card -->
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <button onclick="keepInOcean()" class="w-full py-3 bg-sky-100 hover:bg-sky-200 text-sky-700 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-rotate-left"></i> 暫時放回大海
+                        </button>
+                        <button onclick="permanentlyRemoveCard()" class="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-trash-can"></i> 完成並永久移除
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: 新增卡片 (Add Card Tab) -->
+            <section id="tab-add" class="tab-content hidden space-y-4">
+                <div class="bg-white/90 p-5 rounded-2xl shadow-sm border border-sky-100 space-y-4">
+                    <h2 class="cute-font text-2xl font-bold text-sky-700 flex items-center gap-2">
+                        <span>📝</span> 投遞新願望 / 記憶卡
+                    </h2>
+
+                    <!-- Mode Toggle: Typing vs OCR Scan -->
+                    <div class="flex bg-sky-50 p-1 rounded-xl gap-1 text-xs font-bold">
+                        <button id="modeTypingBtn" onclick="switchAddMode('typing')" class="flex-1 py-2 rounded-lg bg-white text-sky-600 shadow-sm text-center">
+                            ✍️ 手動打字 / 建立
+                        </button>
+                        <button id="modeScanBtn" onclick="switchAddMode('scan')" class="flex-1 py-2 rounded-lg text-gray-500 hover:text-sky-600 text-center">
+                            📷 掃描實體手寫卡
+                        </button>
+                    </div>
+
+                    <!-- OCR Scan UI -->
+                    <div id="scanSection" class="hidden p-4 bg-pink-50/50 border border-dashed border-pink-300 rounded-xl text-center space-y-3">
+                        <i class="fa-solid fa-camera-retro text-3xl text-pink-400"></i>
+                        <p class="text-xs text-gray-600">上載寫好的卡片相片，系統會辨識文字！</p>
+                        <input type="file" id="ocrFileInput" accept="image/*" onchange="handleOCRScan(event)" class="hidden">
+                        <button onclick="document.getElementById('ocrFileInput').click()" class="px-4 py-2 bg-pink-400 hover:bg-pink-500 text-white text-xs font-bold rounded-lg shadow transition">
+                            選擇/拍攝卡片相片
+                        </button>
+                        <div id="ocrStatus" class="text-xs text-pink-600 font-bold hidden">
+                            <i class="fa-solid fa-spinner fa-spin"></i> 文字辨識中...
+                        </div>
+                    </div>
+
+                    <!-- Card Form -->
+                    <form id="cardForm" onsubmit="saveCard(event)" class="space-y-3 text-xs font-medium">
+                        <!-- Category Picker -->
+                        <div>
+                            <label class="block mb-1 text-gray-600 font-bold">選擇分類 *</label>
+                            <select id="cardCategory" required class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300">
+                                <!-- Options rendered dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Card Title/Content -->
+                        <div>
+                            <label class="block mb-1 text-gray-600 font-bold">卡片內容 / 願望 *</label>
+                            <textarea id="cardContent" required rows="3" placeholder="寫下心聲、隨機任務、長遠目標或私密對話..." class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"></textarea>
+                        </div>
+
+                        <!-- Date Selection -->
+                        <div>
+                            <label class="block mb-1 text-gray-600 font-bold">日期 (記憶/目標日期)</label>
+                            <input type="date" id="cardDate" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300">
+                        </div>
+
+                        <!-- Optional Location (Google Maps) -->
+                        <div>
+                            <label class="block mb-1 text-gray-600 font-bold">地點 / Cafe (可選，例: 中環摩天輪)</label>
+                            <input type="text" id="cardLocation" placeholder="輸入地點名稱，自動生成 Google Maps 連結" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300">
+                        </div>
+
+                        <!-- Photo Upload with Compression -->
+                        <div>
+                            <label class="block mb-1 text-gray-600 font-bold">附加圖片 (自動壓縮圖片空間)</label>
+                            <input type="file" id="cardPhotoInput" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-xs text-gray-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
+                            <div id="imagePreviewContainer" class="mt-2 hidden relative">
+                                <img id="imagePreview" class="w-full h-32 object-cover rounded-xl border border-gray-200">
+                                <button type="button" onclick="removeUploadedImage()" class="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs flex items-center justify-center shadow">✕</button>
+                            </div>
+                        </div>
+
+                        <!-- Author Tag -->
+                        <div>
+                            <label class="block mb-1 text-gray-600 font-bold">是誰寫的？</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="radio" name="author" value="🐙 八爪魚" checked class="text-sky-500">
+                                    <span>🐙 八爪魚</span>
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="radio" name="author" value="🦈 鯊魚" class="text-pink-500">
+                                    <span>🦈 鯊魚</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-sky-400 to-blue-500 text-white font-bold rounded-xl shadow-md hover:opacity-90 transition text-sm">
+                            ✨ 放入水族館盒子
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TAB 3: 所有卡片 / 檔案庫 (All Cards List Tab) -->
+            <section id="tab-list" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="cute-font text-2xl font-bold text-sky-700 flex items-center gap-2">
+                        <span>🌊</span> 卡片檔案庫 (<span id="totalCardsCount">0</span>)
+                    </h2>
+                    <!-- Category Filter -->
+                    <select id="listFilterCategory" onchange="renderCardList()" class="p-1.5 bg-white border border-sky-200 rounded-lg text-xs font-bold text-sky-700">
+                        <option value="ALL">全部分類</option>
+                    </select>
+                </div>
+
+                <!-- Cards Grid/List -->
+                <div id="cardListContainer" class="space-y-3">
+                    <!-- Cards will be populated here -->
+                </div>
+            </section>
+
+            <!-- TAB 4: 分類管理 (Category Settings Tab) -->
+            <section id="tab-categories" class="tab-content hidden space-y-4">
+                <div class="bg-white/90 p-5 rounded-2xl shadow-sm border border-sky-100 space-y-4">
+                    <h2 class="cute-font text-2xl font-bold text-sky-700 flex items-center gap-2">
+                        <span>🏷️</span> 管理分類與色彩
+                    </h2>
+
+                    <!-- Add Category Form -->
+                    <div class="flex gap-2">
+                        <input type="text" id="newCatName" placeholder="新分類名稱 (例: 浪漫咖啡廳)" class="flex-1 p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs">
+                        <input type="color" id="newCatColor" value="#38bdf8" class="w-10 h-9 p-0.5 border border-gray-200 rounded-xl cursor-pointer">
+                        <button onclick="addCategory()" class="px-3 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold text-xs shadow">
+                            新增
+                        </button>
+                    </div>
+
+                    <!-- Category List -->
+                    <div id="categoryManagerList" class="space-y-2">
+                        <!-- Render categories -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="bg-white/90 border-t border-sky-100 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 flex justify-around p-2 backdrop-blur-md rounded-t-2xl shadow-lg">
+            <button onclick="switchTab('draw')" id="nav-draw" class="nav-btn flex flex-col items-center py-1 px-3 text-sky-600 font-bold text-xs">
+                <i class="fa-solid fa-dice text-lg mb-0.5"></i>
+                <span>抽選箱</span>
+            </button>
+            <button onclick="switchTab('add')" id="nav-add" class="nav-btn flex flex-col items-center py-1 px-3 text-gray-400 font-bold text-xs hover:text-sky-500">
+                <i class="fa-solid fa-plus-circle text-lg mb-0.5"></i>
+                <span>投遞卡片</span>
+            </button>
+            <button onclick="switchTab('list')" id="nav-list" class="nav-btn flex flex-col items-center py-1 px-3 text-gray-400 font-bold text-xs hover:text-sky-500">
+                <i class="fa-solid fa-box-archive text-lg mb-0.5"></i>
+                <span>檔案庫</span>
+            </button>
+            <button onclick="switchTab('categories')" id="nav-categories" class="nav-btn flex flex-col items-center py-1 px-3 text-gray-400 font-bold text-xs hover:text-sky-500">
+                <i class="fa-solid fa-[#0e1015] fa-tags text-lg mb-0.5"></i>
+                <span>自訂分類</span>
+            </button>
+        </nav>
+
+        <!-- Room / Login Modal -->
+        <div id="loginModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl border border-sky-100 space-y-4">
+                <div class="text-center">
+                    <span class="text-4xl">🔐</span>
+                    <h3 class="cute-font text-2xl font-bold text-sky-700 mt-1">情侶同步水族館</h3>
+                    <p class="text-xs text-gray-500 mt-1">使用 Gmail 登入並輸入相同的「水族館房間 ID」，即可兩個人實時同步願望卡片！</p>
+                </div>
+
+                <!-- Google / Gmail Login Button -->
+                <button onclick="loginWithGoogle()" class="w-full py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 text-xs transition">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                    <span>使用 Gmail 帳號登入</span>
+                </button>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-gray-200"></div>
+                    <span class="flex-shrink mx-2 text-gray-400 text-[10px]">設定房間</span>
+                    <div class="flex-grow border-t border-gray-200"></div>
+                </div>
+
+                <div class="space-y-3 text-xs font-medium">
+                    <div>
+                        <label class="block mb-1 text-gray-600 font-bold">雙人水族館房間 ID (Room ID)</label>
+                        <input type="text" id="roomIdInput" placeholder="例如: shark-octopus-88" class="w-full p-2.5 bg-sky-50 border border-sky-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300">
+                    </div>
+                    <button onclick="joinRoom()" class="w-full py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl shadow transition">
+                        儲存並進入水族館房間
+                    </button>
+                    <button onclick="closeLoginModal()" class="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl text-xs">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-sky-600 text-white text-xs px-4 py-2 rounded-full shadow-lg opacity-0 pointer-events-none transition duration-300">
+            訊息提示
+        </div>
+
+    </div>
+
+    <!-- Firebase Firestore Modules Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global state setup
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'wish-aquarium-default';
+        let firebaseConfig = { apiKey: "", authDomain: "", projectId: "" };
+        
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            try { firebaseConfig = JSON.parse(__firebase_config); } catch(e){}
+        }
+
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let currentRoomId = localStorage.getItem('aquarium_room_id') || 'shark-octopus-sweet-home';
+
+        // Default local categories
+        let categories = [
+            { id: 'cat_1', name: '長遠目標類 🎯', color: '#38bdf8' },
+            { id: 'cat_2', name: '問題卡 ❓', color: '#fb7185' },
+            { id: 'cat_3', name: '今日隨機任務 🎲', color: '#34d399' },
+            { id: 'cat_4', name: '未講嘅話 / 記憶 💌', color: '#a78bfa' }
+        ];
+
+        let allCards = [];
+        let currentlyDrawnCard = null;
+        let currentCompressedImageBase64 = null;
+
+        // Initialize App & Firebase
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('cardDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('roomIdInput').value = currentRoomId;
+
+            if (firebaseConfig.projectId) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            currentUser = user;
+                            updateUserUI(user);
+                            subscribeToRoomData();
+                        } else {
+                            // Auto sign-in anonymously if not logged into Google yet
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                signInAnonymously(auth);
+                            }
+                        }
+                    });
+
+                } catch(err) {
+                    console.log("Local Storage fallback:", err);
+                    loadLocalData();
+                }
+            } else {
+                loadLocalData();
+            }
+
+            renderCategoryOptions();
+            renderCategoryManager();
+            updateDrawPoolCount();
+        });
+
+        // Gmail Google Login
+        window.loginWithGoogle = async function() {
+            if (!auth) {
+                showToast("本機預覽模式，已預設登入並啟用全功能！");
+                closeLoginModal();
+                return;
+            }
+            const provider = new GoogleAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                currentUser = result.user;
+                updateUserUI(currentUser);
+                subscribeToRoomData();
+                closeLoginModal();
+                showToast(`登入成功！歡迎 ${currentUser.displayName || '親愛的'}`);
+            } catch (error) {
+                console.error("Google Auth Error:", error);
+                showToast("Gmail 登入失敗或已取消");
+            }
+        };
+
+        function updateUserUI(user) {
+            const statusText = document.getElementById('userStatusText');
+            const roomDisplay = document.getElementById('roomDisplay');
+
+            if (user && user.displayName) {
+                statusText.innerText = user.displayName.split(' ')[0];
+            } else {
+                statusText.innerText = '已連線登入';
+            }
+            roomDisplay.innerText = `房間: ${currentRoomId}`;
+        }
+
+        // Firebase Firestore Sync
+        function subscribeToRoomData() {
+            if (!db) return;
+            updateUserUI(currentUser);
+
+            // Path rule compliance: /artifacts/{appId}/public/data/{collectionName}
+            const cardsColRef = collection(db, 'artifacts', appId, 'public', 'data', `cards_${currentRoomId}`);
+            
+            onSnapshot(cardsColRef, (snapshot) => {
+                allCards = [];
+                snapshot.forEach((doc) => {
+                    allCards.push({ id: doc.id, ...doc.data() });
+                });
+                renderCardList();
+                updateDrawPoolCount();
+            }, (error) => {
+                console.error("Firestore error:", error);
+            });
+        }
+
+        function loadLocalData() {
+            const stored = localStorage.getItem(`aquarium_cards_${currentRoomId}`);
+            if (stored) {
+                allCards = JSON.parse(stored);
+            }
+            renderCardList();
+            updateDrawPoolCount();
+        }
+
+        function saveLocalData() {
+            localStorage.setItem(`aquarium_cards_${currentRoomId}`, JSON.stringify(allCards));
+            renderCardList();
+            updateDrawPoolCount();
+        }
+
+        // --- Category Functions ---
+        window.addCategory = function() {
+            const name = document.getElementById('newCatName').value.trim();
+            const color = document.getElementById('newCatColor').value;
+            if (!name) return showToast("請輸入分類名稱");
+
+            const newCat = { id: 'cat_' + Date.now(), name, color };
+            categories.push(newCat);
+            document.getElementById('newCatName').value = '';
+            renderCategoryOptions();
+            renderCategoryManager();
+            showToast("成功新增分類！");
+        };
+
+        window.deleteCategory = function(catId) {
+            categories = categories.filter(c => c.id !== catId);
+            renderCategoryOptions();
+            renderCategoryManager();
+            showToast("已刪除分類");
+        };
+
+        function renderCategoryOptions() {
+            const selectDraw = document.getElementById('drawCategorySelect');
+            const selectCard = document.getElementById('cardCategory');
+            const selectFilter = document.getElementById('listFilterCategory');
+
+            let optionsHtml = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            
+            selectDraw.innerHTML = '<option value="ALL">✨ 所有類別隨機</option>' + optionsHtml;
+            selectCard.innerHTML = optionsHtml;
+            selectFilter.innerHTML = '<option value="ALL">全部分類</option>' + optionsHtml;
+        }
+
+        function renderCategoryManager() {
+            const container = document.getElementById('categoryManagerList');
+            container.innerHTML = categories.map(c => `
+                <div class="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full border border-black/10" style="background-color: ${c.color}"></span>
+                        <span class="font-bold text-gray-700">${c.name}</span>
+                    </div>
+                    <button onclick="deleteCategory('${c.id}')" class="text-red-400 hover:text-red-600 px-2 py-1">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // --- Add / Scan Card Logic ---
+        window.switchAddMode = function(mode) {
+            const typingBtn = document.getElementById('modeTypingBtn');
+            const scanBtn = document.getElementById('modeScanBtn');
+            const scanSection = document.getElementById('scanSection');
+
+            if (mode === 'scan') {
+                scanBtn.className = "flex-1 py-2 rounded-lg bg-white text-sky-600 shadow-sm text-center font-bold";
+                typingBtn.className = "flex-1 py-2 rounded-lg text-gray-500 hover:text-sky-600 text-center font-bold";
+                scanSection.classList.remove('hidden');
+            } else {
+                typingBtn.className = "flex-1 py-2 rounded-lg bg-white text-sky-600 shadow-sm text-center font-bold";
+                scanBtn.className = "flex-1 py-2 rounded-lg text-gray-500 hover:text-sky-600 text-center font-bold";
+                scanSection.classList.add('hidden');
+            }
+        };
+
+        // Image compression helper (keeps space small)
+        window.handleImageUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    // Compress resolution max width 600px
+                    const maxWidth = 600;
+                    const scaleSize = maxWidth / img.width;
+                    canvas.width = (img.width > maxWidth) ? maxWidth : img.width;
+                    canvas.height = (img.width > maxWidth) ? (img.height * scaleSize) : img.height;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    currentCompressedImageBase64 = canvas.toDataURL('image/jpeg', 0.6); // 60% quality
+
+                    document.getElementById('imagePreview').src = currentCompressedImageBase64;
+                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                };
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.removeUploadedImage = function() {
+            currentCompressedImageBase64 = null;
+            document.getElementById('cardPhotoInput').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        };
+
+        // Tesseract.js OCR Reader for physical hand-written / typed card scan
+        window.handleOCRScan = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const ocrStatus = document.getElementById('ocrStatus');
+            ocrStatus.classList.remove('hidden');
+
+            try {
+                const worker = await Tesseract.createWorker('chi_tra+eng');
+                const ret = await worker.recognize(file);
+                await worker.terminate();
+
+                const text = ret.data.text.trim();
+                if (text) {
+                    document.getElementById('cardContent').value = text;
+                    showToast("成功辨識手寫/實體卡文字！");
+                } else {
+                    showToast("未能清楚辨識文字，請手動修改");
+                }
+            } catch(e) {
+                console.error(e);
+                showToast("文字辨識發生錯誤");
+            } finally {
+                ocrStatus.classList.add('hidden');
+            }
+        };
+
+        window.saveCard = async function(event) {
+            event.preventDefault();
+
+            const categoryId = document.getElementById('cardCategory').value;
+            const content = document.getElementById('cardContent').value.trim();
+            const date = document.getElementById('cardDate').value;
+            const location = document.getElementById('cardLocation').value.trim();
+            const author = document.querySelector('input[name="author"]:checked').value;
+
+            if (!content) return showToast("請輸入內容");
+
+            const cardId = 'card_' + Date.now();
+            const cardObj = {
+                id: cardId,
+                categoryId,
+                content,
+                date: date || new Date().toISOString().split('T')[0],
+                location: location || '',
+                author,
+                photo: currentCompressedImageBase64 || null,
+                createdAt: Date.now(),
+                removedTemporarily: false
+            };
+
+            if (db && currentUser) {
+                try {
+                    const cardDocRef = doc(db, 'artifacts', appId, 'public', 'data', `cards_${currentRoomId}`, cardId);
+                    await setDoc(cardDocRef, cardObj);
+                } catch(err) {
+                    console.error("Firestore save error", err);
+                }
+            } else {
+                allCards.push(cardObj);
+                saveLocalData();
+            }
+
+            // Reset Form
+            document.getElementById('cardForm').reset();
+            removeUploadedImage();
+            document.getElementById('cardDate').value = new Date().toISOString().split('T')[0];
+            showToast("成功放入水族館盒子！🐙🦈");
+            switchTab('draw');
+        };
+
+        // --- Draw Card Logic ---
+        window.updateDrawPoolCount = function() {
+            const selectedCat = document.getElementById('drawCategorySelect').value;
+            let availableCards = allCards.filter(c => !c.removedTemporarily);
+
+            if (selectedCat !== 'ALL') {
+                availableCards = availableCards.filter(c => c.categoryId === selectedCat);
+            }
+
+            document.getElementById('cardPoolCount').innerText = `可抽：${availableCards.length} 張`;
+            document.getElementById('totalCardsCount').innerText = allCards.length;
+        };
+
+        window.drawCard = function() {
+            const selectedCat = document.getElementById('drawCategorySelect').value;
+            let availableCards = allCards.filter(c => !c.removedTemporarily);
+
+            if (selectedCat !== 'ALL') {
+                availableCards = availableCards.filter(c => c.categoryId === selectedCat);
+            }
+
+            if (availableCards.length === 0) {
+                return showToast("這個分類暫時沒有可抽的卡片或已抽完！");
+            }
+
+            // Shake Animation
+            const box = document.getElementById('drawContainer');
+            box.classList.add('animate-bounce');
+            setTimeout(() => box.classList.remove('animate-bounce'), 800);
+
+            // Pick Random Card
+            const randomIndex = Math.floor(Math.random() * availableCards.length);
+            currentlyDrawnCard = availableCards[randomIndex];
+
+            renderDrawnCardUI(currentlyDrawnCard);
+        };
+
+        function renderDrawnCardUI(card) {
+            const categoryObj = categories.find(c => c.id === card.categoryId) || { name: '預設類別', color: '#38bdf8' };
+            const container = document.getElementById('cardResultDetail');
+
+            let mapButtonHtml = '';
+            if (card.location) {
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(card.location)}`;
+                mapButtonHtml = `
+                    <a href="${mapsUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full font-bold hover:bg-blue-100 transition mt-2">
+                        <i class="fa-solid fa-location-dot"></i> 地點: ${card.location} <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                `;
+            }
+
+            container.style.borderColor = categoryObj.color;
+            container.innerHTML = `
+                <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full text-white" style="background-color: ${categoryObj.color}">
+                        ${categoryObj.name}
+                    </span>
+                    <span class="text-xs text-gray-400 font-medium">${card.date || ''} · ${card.author}</span>
+                </div>
+                
+                <p class="cute-font text-2xl text-gray-800 font-bold leading-relaxed pt-2">
+                    ${card.content}
+                </p>
+
+                ${card.photo ? `<img src="${card.photo}" class="w-full h-44 object-cover rounded-xl mt-2 border border-gray-100 shadow-sm">` : ''}
+
+                ${mapButtonHtml}
+            `;
+
+            document.getElementById('drawnCardResult').classList.remove('hidden');
+            // Scroll to result
+            document.getElementById('drawnCardResult').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        window.keepInOcean = function() {
+            if (!currentlyDrawnCard) return;
+            // Mark temporarily removed for this session
+            currentlyDrawnCard.removedTemporarily = true;
+            document.getElementById('drawnCardResult').classList.add('hidden');
+            updateDrawPoolCount();
+            showToast("暫時放回大海！等下次再抽過 🌊");
+        };
+
+        window.permanentlyRemoveCard = async function() {
+            if (!currentlyDrawnCard) return;
+
+            const cardId = currentlyDrawnCard.id;
+            if (db && currentUser) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', `cards_${currentRoomId}`, cardId);
+                    await deleteDoc(docRef);
+                } catch(e) {
+                    console.error("Delete error", e);
+                }
+            } else {
+                allCards = allCards.filter(c => c.id !== cardId);
+                saveLocalData();
+            }
+
+            document.getElementById('drawnCardResult').classList.add('hidden');
+            showToast("已恭喜完成並永久移除！✨");
+        };
+
+        // --- Card List Archive ---
+        window.renderCardList = function() {
+            const filterCat = document.getElementById('listFilterCategory').value;
+            const container = document.getElementById('cardListContainer');
+
+            let displayCards = [...allCards];
+            if (filterCat !== 'ALL') {
+                displayCards = displayCards.filter(c => c.categoryId === filterCat);
+            }
+
+            // Sort by Date Descending
+            displayCards.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+            if (displayCards.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-gray-400 text-xs">
+                        <i class="fa-solid fa-water text-4xl mb-2 text-sky-200"></i>
+                        <p>水族館暫時空空如也，快去投遞新願望吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = displayCards.map(card => {
+                const cat = categories.find(c => c.id === card.categoryId) || { name: '預設', color: '#38bdf8' };
+                const mapsUrl = card.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(card.location)}` : null;
+
+                return `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 space-y-2 relative" style="border-left-color: ${cat.color}">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-gray-700" style="color: ${cat.color}">${cat.name}</span>
+                            <span class="text-gray-400">${card.date || ''} (${card.author})</span>
+                        </div>
+                        <p class="text-sm font-medium text-gray-800">${card.content}</p>
+                        ${card.photo ? `<img src="${card.photo}" class="w-full h-32 object-cover rounded-xl mt-1 border border-gray-100">` : ''}
+                        <div class="flex justify-between items-center pt-1 text-xs">
+                            ${mapsUrl ? `<a href="${mapsUrl}" target="_blank" class="text-sky-600 font-bold hover:underline"><i class="fa-solid fa-location-dot"></i> ${card.location}</a>` : '<span></span>'}
+                            <button onclick="deleteCardDirectly('${card.id}')" class="text-gray-400 hover:text-red-500 font-bold">
+                                刪除
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.deleteCardDirectly = async function(cardId) {
+            if (db && currentUser) {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', `cards_${currentRoomId}`, cardId);
+                await deleteDoc(docRef);
+            } else {
+                allCards = allCards.filter(c => c.id !== cardId);
+                saveLocalData();
+            }
+            showToast("已移除卡片");
+        };
+
+        // --- Navigation & Modals ---
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.className = "nav-btn flex flex-col items-center py-1 px-3 text-gray-400 font-bold text-xs hover:text-sky-500");
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabName}`).className = "nav-btn flex flex-col items-center py-1 px-3 text-sky-600 font-bold text-xs";
+
+            if (tabName === 'list') renderCardList();
+            if (tabName === 'draw') updateDrawPoolCount();
+        };
+
+        window.openLoginModal = function() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        };
+
+        window.closeLoginModal = function() {
+            document.getElementById('loginModal').classList.add('hidden');
+        };
+
+        window.joinRoom = function() {
+            const inputId = document.getElementById('roomIdInput').value.trim();
+            if (!inputId) return showToast("請輸入房間 ID");
+
+            currentRoomId = inputId;
+            localStorage.setItem('aquarium_room_id', currentRoomId);
+            closeLoginModal();
+
+            if (db && currentUser) {
+                subscribeToRoomData();
+            } else {
+                loadLocalData();
+            }
+            showToast(`成功進入水族館房間：${currentRoomId}`);
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
